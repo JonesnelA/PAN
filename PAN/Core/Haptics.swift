@@ -22,6 +22,8 @@ final class Haptics {
     private var players: [String: [CHHapticPatternPlayer]] = [:]
     private var cursors: [String: Int] = [:]
     private var lastPlayTime: CFTimeInterval = 0
+    /// CHHapticEngine 没有公开 isRunning，自己记一份状态，避免每帧重复 start()
+    private var engineRunning = false
 
     private let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
 
@@ -42,17 +44,29 @@ final class Haptics {
         engine.isAutoShutdownEnabled = false
 
         engine.resetHandler = { [weak self] in
-            try? self?.engine?.start()
+            self?.engineRunning = false
+            self?.startEngine()
             self?.rebuildPlayers()
         }
         engine.stoppedHandler = { [weak self] _ in
+            self?.engineRunning = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                try? self?.engine?.start()
+                self?.startEngine()
             }
         }
 
-        try? engine.start()
+        startEngine()
         rebuildPlayers()
+    }
+
+    private func startEngine() {
+        guard let engine, !engineRunning else { return }
+        do {
+            try engine.start()
+            engineRunning = true
+        } catch {
+            engineRunning = false
+        }
     }
 
     // MARK: - 对外
@@ -95,8 +109,8 @@ final class Haptics {
         guard now - lastPlayTime >= minInterval else { return }
         lastPlayTime = now
 
-        if engine?.isRunning != true {
-            try? engine?.start()
+        if !engineRunning {
+            startEngine()
         }
 
         if let player = nextPlayer(for: name),
