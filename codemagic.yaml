@@ -1,0 +1,48 @@
+# Codemagic 配置：GitHub Actions 额度用完之后，换这家的免费 macOS 机器。
+#
+# 用法：把仓库接到 https://codemagic.io ，它会自动读取本文件。
+# 免费额度约 500 分钟/月（以官网为准），一次构建 4~6 分钟，够出几十次包。
+
+workflows:
+  pan-unsigned:
+    name: PAN · 未签名 ipa
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+      vars:
+        XCODE_PROJECT: "PAN.xcodeproj"
+        XCODE_SCHEME: "PAN"
+
+    scripts:
+      - name: 安装 XcodeGen
+        script: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        script: xcodegen generate
+
+      - name: 编译（关闭签名）
+        script: |
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: 打包成 ipa
+        script: |
+          APP="build/Build/Products/Release-iphoneos/PAN.app"
+          test -d "$APP"
+          rm -rf build/Payload build/PAN-unsigned.ipa
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          cd build && zip -qry PAN-unsigned.ipa Payload
+          ls -lh PAN-unsigned.ipa
+
+    artifacts:
+      - build/PAN-unsigned.ipa

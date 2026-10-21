@@ -1,0 +1,70 @@
+name: build-ipa
+
+# 在 GitHub 的免费 macOS 机器上编译出未签名 ipa，全程不需要自己的 Mac。
+# 说明：public 仓库的 macOS runner 分钟数免费；private 仓库有免费额度，之后按分钟计费。
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - "PAN/**"
+      - "project.yml"
+      - ".github/workflows/build-ipa.yml"
+
+# 连续 push 时取消上一次没跑完的，别排队烧时间
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PAN.xcodeproj \
+            -scheme PAN \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tail -n 40
+
+      - name: Package ipa
+        run: |
+          APP="build/Build/Products/Release-iphoneos/PAN.app"
+          test -d "$APP"
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          cd build
+          zip -qry PAN-unsigned.ipa Payload
+          ls -lh PAN-unsigned.ipa
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAN-unsigned-ipa
+          path: build/PAN-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30

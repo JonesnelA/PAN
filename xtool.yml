@@ -1,0 +1,11 @@
+# xtool 项目配置
+#
+# 用途：在没有 Mac 的情况下，用 WSL / Linux 直接把 SwiftUI 代码编译成 iOS App，
+#      签名并安装到真机（xtool 会自己注册设备、申请证书、生成 profile）。
+#
+# 用法见 README「路线 B：xtool 交叉编译」。
+# 注意：xtool 的配置极简，只认 version / bundleID 这类基础键；
+#      多余的自定义键可能被忽略或报错，所以这里保持最小。
+
+version: 1
+bundleID: com.yourname.pan
