@@ -8,4 +8,4 @@
 #      多余的自定义键可能被忽略或报错，所以这里保持最小。
 
 version: 1
-bundleID: com.yourname.pan
+bundleID: com.jonesnela.pan
