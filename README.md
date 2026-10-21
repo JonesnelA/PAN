@@ -51,7 +51,7 @@ git init
 git add .
 git commit -m "PAN"
 git branch -M main
-git remote add origin https://github.com/你的用户名/pan.git
+git remote add origin https://github.com/JonesnelA/PAN.git
 git push -u origin main
 ```
 
